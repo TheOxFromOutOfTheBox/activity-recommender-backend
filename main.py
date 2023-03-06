@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI,Request
 from fastapi.middleware.cors import CORSMiddleware
 import pymongo
 from pydantic import BaseModel,Field, EmailStr
@@ -9,6 +9,9 @@ import time
 import math
 from bson.json_util import dumps, loads
 import random
+import requests
+import json
+from io import BytesIO
 
 app = FastAPI()
 
@@ -18,24 +21,24 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    # allow_methods=["*"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
-class PyObjectId(ObjectId):
-    @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
+# class PyObjectId(ObjectId):
+#     @classmethod
+#     def __get_validators__(cls):
+#         yield cls.validate
 
-    @classmethod
-    def validate(cls, v):
-        if not ObjectId.is_valid(v):
-            raise ValueError("Invalid objectid")
-        return ObjectId(v)
+#     @classmethod
+#     def validate(cls, v):
+#         if not ObjectId.is_valid(v):
+#             raise ValueError("Invalid objectid")
+#         return ObjectId(v)
 
-    @classmethod
-    def __modify_schema__(cls, field_schema):
-        field_schema.update(type="string")
+#     @classmethod
+#     def __modify_schema__(cls, field_schema):
+#         field_schema.update(type="string")
 
 class UserData(BaseModel):
     # id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
@@ -213,6 +216,37 @@ async def place():
 
 
 
+@app.post('/test')
+async def test(request:Request):
+    json_data = await request.body()
+    a=BytesIO(json_data)
+    data=json.loads(a.getvalue())
+    print(data)
+    latitude=data['latitude']
+    longitude=data['longitude']
+    radius=data['radius']
+    activity=data['activity']
+    open_now=data['opennow']
+    API_KEY='AIzaSyAdPKAhAgQP53GPUmaNIaeVd7icH2EEXhg'
+    a={
+        'bar':f'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={latitude}%2C{longitude}&radius={radius}&type=bar&keyword=bar&key=',
+        'theater':f'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={latitude}%2C{longitude}&radius={radius}&type=movie_theater&keyword=movie%20theater&key=',
+        'sports_club':f'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={latitude}%2C{longitude}&radius={radius}&type=gym&keyword=gym&key=',
+        'cafe':f'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={latitude}%2C{longitude}&radius={radius}&type=cafe&keyword=cafe&key=',
+        'park':f'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={latitude}%2C{longitude}&radius={radius}&type=park&keyword=park&key=',
+        'museum':f'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={latitude}%2C{longitude}&radius={radius}&type=museum&keyword=museum&key=',
+        'beauty_salon':f'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={latitude}%2C{longitude}&radius={radius}&type=beauty_salon&keyword=beauty%20salon&key=',
+        'restaurant':f'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={latitude}%2C{longitude}&radius={radius}&type=restaurant&keyword=restaurant&key=',
+        'shopping_center':f'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={latitude}%2C{longitude}&radius={radius}&type=mall&keyword=mall&key=',
+        'swimming_pools':f'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={latitude}%2C{longitude}&radius={radius}&type=swimming_pools&keyword=swimming%20pools&key=',
+        'club':f'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={latitude}%2C{longitude}&radius={radius}&type=club&keyword=club&key=',
+        'cinema':f'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={latitude}%2C{longitude}&radius={radius}&type=cinema&keyword=cinema&key=',
+        'amusement_park':f'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={latitude}%2C{longitude}&radius={radius}&type=amusement_park&keyword=amusement%20park&key='
+
+    }
+    r1=requests.get(f'{a[activity]}{API_KEY}&opennow={open_now}')
+    # print(r1.content)
+    return {"data":r1.json()}
 
 # @app.delete("/users/delete/{id}")
 # async def deleteOne(id):

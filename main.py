@@ -13,6 +13,7 @@ import requests
 import json
 from io import BytesIO
 import csv
+import bcrypt
 
 app = FastAPI()
 
@@ -46,7 +47,7 @@ class UserData(BaseModel):
     name: str=Field(...)
     username:str=Field(...)
     email: EmailStr=Field(...)
-    age: int=Field(...)
+    password: str=Field(...)
 
 client = pymongo.MongoClient("mongodb+srv://admin:admin@cluster0.po4gq8d.mongodb.net/test")
 db=client['Users']
@@ -69,13 +70,49 @@ async def getAll(username):
     coll=db['UserData']
     print(coll)
     cursor=coll.find({"username":username},{"_id":0})
-    return {"data":list(cursor)}
+    a={"data":list(cursor)}
+    print(a["data"][0]["password"])
+    mypwd="asdf@1234"
+    # salt = bcrypt.gensalt()
+    userBytes=mypwd.encode('utf-8')
+    hash=a["data"][0]["password"]
+    result = bcrypt.checkpw(userBytes, hash)
+    print(result)
+    return a
+
+@app.post("/login")
+async def login(request:Request):
+    json_data = await request.body()
+    a=BytesIO(json_data)
+    data=json.loads(a.getvalue())
+    print(data)
+    username=data["username"]
+    password=data["password"]
+    try:
+        coll=db['UserData']
+        print(coll)
+        cursor=coll.find({"username":username},{"_id":0})
+        userBytes=password.encode('utf-8')
+        a={"data":list(cursor)}
+        hash=a["data"][0]["password"]
+        result = bcrypt.checkpw(userBytes, hash)
+        print(result)
+        if(not result):
+            return {"message":"invalid credentials"}
+        return {"message":"success"}
+    except:
+        return {"message":"invalid credentials"}
 
 @app.post("/users/createOne")
 async def createOne(item:UserData):
     coll=db['UserData']
     print(type(item))
-    coll.insert_one(dict(item))
+    item=dict(item)
+    salt = bcrypt.gensalt()
+    bytes = item["password"].encode('utf-8')
+    hash= bcrypt.hashpw(bytes, salt)
+    item["password"]=hash
+    coll.insert_one(item)
     return {"message":"inserted successfully!"}
 
 @app.put("/users/update/{username:str}")
@@ -330,9 +367,9 @@ async def getMatching(request:Request):
 
 
     # name = input("What is your name? ")
-    name="KMH"
+    name=data["name"]
     # time = int(input("How many hours do you have? (1-6) "))
-    time=4
+    time=int(data["time"])
     activity_list = ["parks", "museums", "galleries", "shopping centers", "theaters", "amusement_parks", "swimming_pools", "sports_clubs", "salons", "cinemas", "bars", "restaurants", "clubs","cafes"]
     options = []
 
@@ -341,7 +378,7 @@ async def getMatching(request:Request):
     #     print(f"{i+1}. {activity_list[i]}")
     for i in range(3):
         # option = int(input(f"Please select your option {i+1} (1-14): "))
-        option=11
+        option=int(data["activity"])
         category =activity_list[option-1]
         options.append(category)
         if category == "restaurants":
@@ -350,7 +387,7 @@ async def getMatching(request:Request):
             # for i in range(len(cuisines)):
             #     print(f"{i+1}. {cuisines[i]}")
             # cuisine = int(input("Which cuisine would you like to have? (1-14): "))
-            cuisine=10
+            cuisine=data["cuisine"]
             if cuisine >= 1 and cuisine <= 14:
                 cuisine = cuisines[cuisine-1]
             else:
@@ -361,7 +398,7 @@ async def getMatching(request:Request):
             # for i in range(len(payment)):
             #     print(f"{i+1}. {payment[i]}")
             # payment =  (input("Select range out of 4 options: "))
-            payment="$$"
+            payment=data["payment"]
 
     # budget = int(input("How much would you like to spend? (CAD) "))
     budget=4000

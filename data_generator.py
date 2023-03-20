@@ -46,7 +46,7 @@ with open("activities.csv", "w", newline="") as file:
     writer.writerow(["Name", "Time", "3Categories", "Budget", "Cuisine", "Bar Payment", "Top Recommendations"])
 
 
-    for i in range(5000):
+    for i in range(3000):
 
         name = random.choice(names)
         time = random.randint(1, 6)
